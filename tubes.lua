@@ -278,12 +278,12 @@ local app = {}
 
       function app:doWork()
         print("Creating Tunnel")
-        local x,y,z,heading,torchStep
+        local x,y,z,heading
         local targetHeight = tonumber(app.options.height)
         local targetWidth = tonumber(app.options.width)
         local targetLength = tonumber(app.options.length)
         local torchInterval = tonumber(app.options.torches)
-
+        local torchStep = 0
         for z=1, targetLength do -- main loop
           print(string.format("Step %d/%d", z, targetLength))
           torchStep = torchStep + 1
