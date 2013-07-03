@@ -5,12 +5,12 @@ Manifest = function()
 	]]
 	return {
 		-- human readable name and description, shown in `github list` or github search `app`
-		name = 'Staircases',
-		description = "Creates 45 degree stair cases. forked from aTunnel by Andre L Noel",
+		name = 'Tubes',
+		description = "Create Tunnels & Stairs. forked from aTunnel by Andre L Noel",
 		-- moreinfo: google "semver"
-		version = '0.0.1',
+		version = '0.0.2',
 		-- used by github client, used to rename this file
-		command = 'stairs',
+		command = 'tube',
 		-- attributation: author
 		author = "Zenobius Jiricek <airtonix@gmail.com>",
     -- attributation: contributors
@@ -23,19 +23,24 @@ end
 local app = {}
       app.manifest = Manifest()
       app.arguments = {
-        { name = 'length', value = 16},
-        { name = 'direction', value = 'up'},
-        { name = 'width', value = 3},
-        { name = 'height', value = 3},
-        { name = 'torches', value = 4},
-        { name = 'fill', value = false}
+        { name = 'length', value = 16 },
+        { name = 'width', value = 3 },
+        { name = 'height', value = 3 },
+        { name = 'torches', value = 4 },
+        --[[
+          false: No vertical shift
+          up: move up one block each forward frame
+          down: move down one block each forward frame
+        ]]
+        { name = 'stairs', value = false },
+        { name = 'fill', value = false }
       }
       app.options = {}
 
       function app:showUsage()
         print(app.manifest.name, " ", app.manifest.version)
         print "Usage: "
-        print "> stairs L D [H] [W] [Ti] "
+        print "> tube L D [H] [W] [Ti] "
         print " L [int]: blocks forward to mine"
         print " D [up/down]: stairs up or down"
         print " H [int]: blocks up to mine"
@@ -50,10 +55,6 @@ local app = {}
 
         print "Examples:"
         print "> stairs --length=28 --torches=6"
-        print "> stairs 28 --torches=6"
-        print "> stairs 28 3 3 --torches=6"
-        print "> stairs 28 3 3 6"
-        print "> stairs 28 6 --width=3"
 
       end
 
@@ -71,16 +72,17 @@ local app = {}
           app.options[item.name] = item.value
         end
 
-
         for i = #args, 1, -1 do
-
+          -- match something like : --word
           local flag = args[i]:match("^%-%-(.*)")
           if flag then
+            -- match something like : key=value
             local name, _, value = flag:match("([a-z_%-]*)(=?(.*))")
             if not value or value == "" then value = true end
             app.options[name] = value
           end
 
+          -- match word or number
           local arg = args[i]:match("^[a-zA-z0-9]+")
           if arg then
             for ii = 0, 1, 1 do
@@ -104,9 +106,11 @@ local app = {}
       end
 
 
-      function app:needsFuel(level)
-        if type(level) == "number" then return level < 1 end
-        if type(level) == "string" then return level ~= "unlimited" end
+      local fuelLevel
+      function app:needsFuel()
+        fuelLevel = turtle.getFuelLevel()
+        if type(fuelLevel) == "number" then return fuelLevel < 1 end
+        if type(fuelLevel) == "string" then return fuelLevel ~= "unlimited" end
         return false
       end
 
@@ -164,7 +168,7 @@ local app = {}
 
       function app:fuelup(...)
         result = true
-        while self:needsFuel(turtle.getFuelLevel()) do
+        while self:needsFuel() do
           result = false
           for i=2,15 do
             turtle.select(i)
@@ -257,11 +261,24 @@ local app = {}
         turtle.place()
       end
 
+      function app:doStairStep(reverse)
+        local stairs = app.options.stairs
+
+        if type(stairs) == "string" then
+          if stairs == "down" then
+            if not reverse then self:moveDown() else self:moveUp() end
+          end
+          if stairs == "up" then
+            if not reverse then self:moveUp() else self:moveDown() end
+          end
+        end
+
+      end
 
 
       function app:doWork()
         print("Creating Tunnel")
-        local x,y,z,heading
+        local x,y,z,heading,torchStep
         local targetHeight = tonumber(app.options.height)
         local targetWidth = tonumber(app.options.width)
         local targetLength = tonumber(app.options.length)
@@ -269,15 +286,16 @@ local app = {}
 
         for z=1, targetLength do -- main loop
           print(string.format("Step %d/%d", z, targetLength))
-
-          if z % torchInterval > 0 then
-            self:turnAround()
+          torchStep = torchStep + 1
+          if torchStep == torchInterval then
+            turtle.turnLeft()
             self:placeTorch()
-            self:turnAround()
+            turtle.turnRight()
+            torchStep = 0
           end
 
           self:moveForward()
-          self:moveDown()
+          self:doStairStep()
           turtle.turnRight()
 
           for y=1, targetHeight+1 do
@@ -321,8 +339,9 @@ local app = {}
         print "Returning to deployment zone."
 
         self:turnAround()
+        local reverseStepDirection = true
         for x=targetLength,1,-1 do
-          turtle.up()
+          self:doStairStep(reverseStepDirection)
           turtle.forward()
         end
         print "Done."
