@@ -11,7 +11,7 @@ Manifest = function()
     author = 'Andre L Noel',
     contributors = {
       "Zenobius Jiricek <airtonix@gmail.com>",
-    }
+    },
     license = "CCA 3.0 Unported License. <http://creativecommons.org/licenses/by/3.0/deed.en_US>"
   }
 end
