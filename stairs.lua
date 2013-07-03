@@ -27,7 +27,7 @@ local app = {}
         { name = 'direction', value = 'up'},
         { name = 'width', value = 3},
         { name = 'height', value = 3},
-        { name = 'torches', value = 4}
+        { name = 'torches', value = 4},
         { name = 'fill', value = false}
       }
       app.options = {}
@@ -148,19 +148,18 @@ local app = {}
         end
 
         -- check inventory space
-          if not self:hasStorageSpace() then
-            print " "
-            print "Turtle inventory has no free slots."
-            print "Please remove items except for"
-            print "filler blocks in slot 1 and"
-            print "torches in slot 16 and"
-            print "any needed fuel such as coal."
-            turtle.select(2)
-            print "Press Enter when done."
-            x = read()
-          end
-          turtle.select(1)
+        if not self:hasStorageSpace() then
+          print " "
+          print "Turtle inventory has no free slots."
+          print "Please remove items except for"
+          print "filler blocks in slot 1 and"
+          print "torches in slot 16 and"
+          print "any needed fuel such as coal."
+          turtle.select(2)
+          print "Press Enter when done."
+          x = read()
         end
+        turtle.select(1)
       end
 
       function app:fuelup(...)
