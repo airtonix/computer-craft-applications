@@ -324,14 +324,13 @@ local app = {}
           end
 
           --realign to left edge
-          if heading == 0  then
-            turtle.turnRight()
-          else
+          if heading == 1  then
             self:turnAround()
-            self:moveForward()
-            self:moveForward()
-            turtle.turnLeft()
+            for w=targetWidth,1,-1 do
+              self:moveForward()
+            end
           end
+          turtle.turnRight()
 
         end -- main loop
 
