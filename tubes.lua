@@ -171,7 +171,7 @@ local app = {}
         result = true
         while self:needsFuel() do
           result = false
-          for i=2,15 do
+          for i=1,15 do
             turtle.select(i)
             if turtle.refuel(1) then
               result = true
@@ -258,8 +258,26 @@ local app = {}
       end
 
       function app:placeTorch()
+        turtle.dig()
         turtle.select(16)
         turtle.place()
+      end
+
+      function app:torchDecision(distance)
+        local torchInterval = tonumber(app.options.torches)
+        if torchInterval == 0 then return end
+        if distance % torchInterval == 0 then
+          print("placing a torch")
+          if distance % 2 > 0 then
+            turtle.turnRight()
+            self:placeTorch()
+            turtle.turnLeft()
+          else
+            turtle.turnLeft()
+            self:placeTorch()
+            turtle.turnRight()
+          end
+        end
       end
 
       function app:doStairStep(reverse)
@@ -272,11 +290,6 @@ local app = {}
             if not reverse then self:moveUp() else self:moveDown() end
           end
         end
-      end
-
-      function app:getHeading(int)
-        if int == 0 then return 'left' end
-        if int == 1 then return 'right' end
       end
 
       function app:digFrame(startX, startY, increment, targetX, targetY)
@@ -316,14 +329,11 @@ local app = {}
 
       function app:doWork()
         print("Creating Tunnel")
-        local z
         local targetHeight = tonumber(app.options.height)
         local targetWidth = tonumber(app.options.width)
         local targetLength = tonumber(app.options.length)
-        local torchInterval = tonumber(app.options.torches)
-        local torchStep = 0
-
-        for z=1, targetLength do -- main loop
+        local z
+        for z=1, targetLength, 1 do -- main loop
           print(string.format("Step %d/%d %d", z, targetLength, z % 2))
 
           self:moveForward()
@@ -336,18 +346,18 @@ local app = {}
             turtle.turnLeft()
             self:digFrame(targetWidth-1, targetHeight, -1, 1, 1)
           end
-
+          self:torchDecision(z)
         end -- main loop
 
-        -- print "Tunnel complete."
-        -- print "Returning to deployment zone."
+        print "Tunnel complete."
+        print "Returning to deployment zone."
 
-        -- self:turnAround()
-        -- local reverseStepDirection = true
-        -- for x=targetLength,1,-1 do
-        --   self:doStairStep(reverseStepDirection)
-        --   turtle.forward()
-        -- end
+        self:turnAround()
+        local reverseStepDirection = true
+        for x=targetLength,1,-1 do
+          self:doStairStep(reverseStepDirection)
+          turtle.forward()
+        end
         print "Done."
       end
 
