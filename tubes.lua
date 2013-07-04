@@ -23,10 +23,10 @@ end
 local app = {}
       app.manifest = Manifest()
       app.arguments = {
-        { name = 'length', value = 16 },
+        { name = 'length', value = 1 },
         { name = 'width', value = 3 },
         { name = 'height', value = 3 },
-        { name = 'torches', value = 4 },
+        { name = 'torches', value = 0 },
         --[[
           false: No vertical shift
           up: move up one block each forward frame
@@ -106,11 +106,11 @@ local app = {}
       end
 
 
-      local fuelLevel
       function app:needsFuel()
-        fuelLevel = turtle.getFuelLevel()
-        if type(fuelLevel) == "number" then return fuelLevel < 1 end
-        if type(fuelLevel) == "string" then return fuelLevel ~= "unlimited" end
+        local fuelLevel = turtle.getFuelLevel()
+        local fuelType = type(fuelLevel)
+        if fuelType == "number" then return fuelLevel < 1 end
+        if fuelType == "string" then return fuelLevel ~= "unlimited" end
         return false
       end
 
@@ -127,8 +127,9 @@ local app = {}
       function app:invenCheck()
         local torches = app.options.torches
         local fill = app.options.fill
+
         -- check torches
-        if torches ~= nil or tonumber(torches) > 0 then
+        if tonumber(torches) > 0 then
           turtle.select(16)
           while ( turtle.getItemCount(16) < 1 ) do
             print " "
@@ -140,7 +141,7 @@ local app = {}
         end
 
         -- check filler
-        if fill ~= nil then
+        if fill then
           turtle.select(1)
           while turtle.getItemCount(1) < 1 do
             print " "
@@ -263,7 +264,6 @@ local app = {}
 
       function app:doStairStep(reverse)
         local stairs = app.options.stairs
-
         if type(stairs) == "string" then
           if stairs == "down" then
             if not reverse then self:moveDown() else self:moveUp() end
@@ -272,77 +272,82 @@ local app = {}
             if not reverse then self:moveUp() else self:moveDown() end
           end
         end
-
       end
 
+      function app:getHeading(int)
+        if int == 0 then return 'left' end
+        if int == 1 then return 'right' end
+      end
 
-      function app:doWork()
-        print("Creating Tunnel")
-        local x,y,z,heading
-        local targetHeight = tonumber(app.options.height)
-        local targetWidth = tonumber(app.options.width)
-        local targetLength = tonumber(app.options.length)
-        local torchInterval = tonumber(app.options.torches)
-        local torchStep = 0
-        for z=1, targetLength do -- main loop
-          print(string.format("Step %d/%d", z, targetLength))
-          torchStep = torchStep + 1
-          if torchStep == torchInterval then
-            turtle.turnLeft()
-            self:placeTorch()
-            turtle.turnRight()
-            torchStep = 0
-          end
+      function app:digFrame(startX, startY, increment, targetX, targetY)
+          local x, y, heading = 0,0,0
+          for y=startY, targetY, increment do
 
-          self:moveForward()
-          self:doStairStep()
-          turtle.turnRight()
+            --[[ determine odd or even row, means
+                turtle is heading left or right ]]
+            heading = y % 2
+            print("row: ", y, " heading: ", heading)
 
-          for y=1, targetHeight+1 do
-
-            for x=1, targetWidth-1 do
+            for x=startX, targetX, increment do
               -- dig rows
               self:moveForward()
             end
 
             --[[ only move up to next row if turtle
                  is not already at the ceiling ]]
-            if y <= targetHeight then
+            if y < targetY and increment > 0 then
               self:moveUp()
-              self:turnAround()
             end
-            --[[ determine odd or even row, means
-                turtle is heading left or right ]]
-            heading = y % 2
-            print(y, heading)
-          end
+            if y > targetY and increment < 0 then
+              self:moveDown()
+            end
 
-          --return to bottom row
-          for y=app.options.height,1,-1  do
-            --back down plus one
-            self:moveDown()
-          end
-
-          --realign to left edge
-          if heading == 1  then
             self:turnAround()
-            for w=targetWidth,1,-1 do
-              self:moveForward()
-            end
           end
-          turtle.turnRight()
+
+          if heading == 0  then
+            if increment < 0 then turtle.turnRight() end
+            if increment > 0 then turtle.turnLeft() end
+          else
+            if increment < 0 then turtle.turnLeft() end
+            if increment > 0 then turtle.turnRight() end
+          end
+      end
+
+      function app:doWork()
+        print("Creating Tunnel")
+        local z
+        local targetHeight = tonumber(app.options.height)
+        local targetWidth = tonumber(app.options.width)
+        local targetLength = tonumber(app.options.length)
+        local torchInterval = tonumber(app.options.torches)
+        local torchStep = 0
+
+        for z=1, targetLength do -- main loop
+          print(string.format("Step %d/%d %d", z, targetLength, z % 2))
+
+          self:moveForward()
+          self:doStairStep()
+
+          if z % 2 > 0 then
+            turtle.turnRight()
+            self:digFrame(1, 1, 1, targetWidth-1, targetHeight)
+          else
+            turtle.turnLeft()
+            self:digFrame(targetWidth-1, targetHeight, -1, 1, 1)
+          end
 
         end -- main loop
 
-        print "Tunnel complete."
-        print "Returning to deployment zone."
+        -- print "Tunnel complete."
+        -- print "Returning to deployment zone."
 
-        self:turnAround()
-        local reverseStepDirection = true
-        for x=targetLength,1,-1 do
-          self:doStairStep(reverseStepDirection)
-          turtle.forward()
-        end
+        -- self:turnAround()
+        -- local reverseStepDirection = true
+        -- for x=targetLength,1,-1 do
+        --   self:doStairStep(reverseStepDirection)
+        --   turtle.forward()
+        -- end
         print "Done."
       end
 
