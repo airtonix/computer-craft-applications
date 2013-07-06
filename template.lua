@@ -1,4 +1,3 @@
-
 Manifest = function()
 	--[[
 		meta data used by the computer craft github client.

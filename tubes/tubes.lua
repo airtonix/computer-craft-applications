@@ -1,23 +1,17 @@
 
 Manifest = function()
-	--[[
-		meta data used by the computer craft github client.
-	]]
-	return {
-		-- human readable name and description, shown in `github list` or github search `app`
-		name = 'Tubes',
-		description = "Create Tunnels & Stairs. forked from aTunnel by Andre L Noel",
-		-- moreinfo: google "semver"
-		version = '0.0.2',
-		-- used by github client, used to rename this file
-		command = 'tube',
-		-- attributation: author
-		author = "Zenobius Jiricek <airtonix@gmail.com>",
-    -- attributation: contributors
+  --[[
+    meta data used by the computer craft github client.
+  ]]
+  return {
+    name = 'Tubes',
+    description = "Create Tunnels & Stairs. forked from aTunnel by Andre L Noel",
+    version = '0.0.2',
+    command = 'tube',
+    author = "Zenobius Jiricek <airtonix@gmail.com>",
     contributors = {},
-		-- attributation: license type
-		license = "CCA 3.0 Unported License. <http://creativecommons.org/licenses/by/3.0/deed.en_US>"
-	}
+    license = "CCA 3.0 Unported License. <http://creativecommons.org/licenses/by/3.0/deed.en_US>"
+  }
 end
 
 local app = {}
@@ -33,12 +27,20 @@ local app = {}
           down: move down one block each forward frame
         ]]
         { name = 'stairs', value = false },
-        { name = 'fill', value = false }
+        { name = 'fill', value = false },
+        { name = 'floorFillSlot', value = false },
+        { name = 'wallFillSlot', value = false },
+        { name = 'ceilingFillSlot', value = false }
       }
       app.options = {}
+      app.coordinates = {
+        x = 0,
+        y = 0,
+        z = 0,
+      }
 
       function app:showUsage()
-        print(app.manifest.name, " ", app.manifest.version)
+        print(self.manifest.name, " ", self.manifest.version)
         print "Usage: "
         print "> tube L D [H] [W] [Ti] "
         print " L [int]: blocks forward to mine"
@@ -59,7 +61,7 @@ local app = {}
       end
 
       function app:showOptions()
-        for key,value in pairs(app.options) do
+        for key,value in pairs(self.options) do
           print(key, ": ", value)
         end
       end
@@ -67,9 +69,9 @@ local app = {}
       function app:parse_args(args)
         local flags = {}
         local name, value, item
-        for i = #app.arguments, 1, -1 do
-          item = app.arguments[i]
-          app.options[item.name] = item.value
+        for i = #self.arguments, 1, -1 do
+          item = self.arguments[i]
+          self.options[item.name] = item.value
         end
 
         for i = #args, 1, -1 do
@@ -79,7 +81,7 @@ local app = {}
             -- match something like : key=value
             local name, _, value = flag:match("([a-z_%-]*)(=?(.*))")
             if not value or value == "" then value = true end
-            app.options[name] = value
+            self.options[name] = value
           end
 
           -- match word or number
@@ -87,7 +89,7 @@ local app = {}
           if arg then
             for ii = 0, 1, 1 do
               if i == ii then
-                app.options[app.arguments[ii].name] = arg
+                self.options[self.arguments[ii].name] = arg
               end
             end
           end
@@ -98,7 +100,7 @@ local app = {}
       function app:init(args)
         self:parse_args(args)
 
-        if app.options.help~=nil then
+        if self.options.help~=nil then
           self:showUsage()
           return
         end
@@ -114,19 +116,34 @@ local app = {}
         return false
       end
 
+      function  app:getItemSlot( slot )
+        local slot = slot and tonumber(slot)
+        if type(slot) == "number" then
+          turtle.select(slot)
+          return slot
+        end
+        for i=2, 15 do
+          turtle.select(i)
+          if turtle.getItemCount(i) >0 then
+            return i
+          end
+        end
+        return false
+      end
+
       function app:hasStorageSpace()
         for i=2, 15 do
           turtle.select(i)
           if turtle.getItemCount(i) < 1 then
-            return true
+            return i
           end
         end
         return false
       end
 
       function app:invenCheck()
-        local torches = app.options.torches
-        local fill = app.options.fill
+        local torches = self.options.torches
+        local fill = self.options.fill
 
         -- check torches
         if tonumber(torches) > 0 then
@@ -257,22 +274,55 @@ local app = {}
         end
       end
 
+      function app:setHeading(heading)
+        self.coordinates.heading = heading
+      end
+      function app:getHeading(heading)
+        return self.coordinates.heading
+      end
+
+      function app:setX(x)
+        local current = self.coordinates.x
+        if x > current then self:setHeading('right') end
+        if x < current then self:setHeading('left') end
+        self.coordinates.x = x
+      end
+      function app:getX() return self.coordinates.x end
+
+      function app:setY(y) self.coordinates.y=y end
+      function app:getY() return self.coordinates.y end
+
+      function app:setZ(z) self.coordinates.z=z end
+      function app:getZ() return self.coordinates.z end
+
+      function app:setCoords(x,y,z)
+        self:setX(x)
+        self:setY(y)
+        self:setZ(z)
+      end
+
+      function app:getCoords()
+        print(string.format("%s.%s.%s", self.coordinates.x, self.coordinates.y, self.coordinates.z ))
+      end
+
       function app:placeTorch()
         turtle.dig()
-        turtle.select(16)
+        turtle.select(1)
         turtle.place()
       end
 
+
       function app:torchDecision(distance)
-        local torchInterval = tonumber(app.options.torches)
+        local torchInterval = tonumber(self.options.torches)
+        local currentX = self:getX()
         if torchInterval == 0 then return end
         if distance % torchInterval == 0 then
-          print("placing a torch")
-          if distance % 2 > 0 then
+          if currentX == self.options.width then
             turtle.turnRight()
             self:placeTorch()
             turtle.turnLeft()
-          else
+          end
+          if currentX == 1 then
             turtle.turnLeft()
             self:placeTorch()
             turtle.turnRight()
@@ -281,7 +331,7 @@ local app = {}
       end
 
       function app:doStairStep(reverse)
-        local stairs = app.options.stairs
+        local stairs = self.options.stairs
         if type(stairs) == "string" then
           if stairs == "down" then
             if not reverse then self:moveDown() else self:moveUp() end
@@ -292,72 +342,148 @@ local app = {}
         end
       end
 
-      function app:digFrame(startX, startY, increment, targetX, targetY)
-          local x, y, heading = 0,0,0
-          for y=startY, targetY, increment do
+      function app:fillFloor()
+        if not self.options.fill then return end
+        local y = self:getY()
+        if y ~= 1 then return end
+        if not turtle.detectDown() then
+          print("placing floor")
+          app:getItemSlot(app.options.floorFillSlot)
+          turtle.placeDown()
+        end
+      end
 
-            --[[ determine odd or even row, means
-                turtle is heading left or right ]]
-            heading = y % 2
-            print("row: ", y, " heading: ", heading)
+      function app:fillCeiling()
+        if not self.options.fill then return end
+        local y = self:getY()
+        if y ~= tonumber(self.options.height) then return end
+        if not turtle.detectUp() then
+          print("placing ceiling")
+          app:getItemSlot(app.options.ceilingFillSlot)
+          turtle.placeUp()
+        end
+      end
+      function app:fillWall()
+        if not self.options.fill then return end
+        local x = self:getX()
+        if x ~= 1 and x ~= tonumber(self.options.width) then return end
+        if not turtle.detect() then
+          print("placing wall")
+          app:getItemSlot(self.options.wallFillSlot)
+          turtle.place()
+        end
+      end
 
-            for x=startX, targetX, increment do
-              -- dig rows
-              self:moveForward()
+      function app:digFrame()
+          local desiredWidth = tonumber(self.options.width)
+          local desiredHeight = tonumber(self.options.height)
+
+          local incrementX, targetX = 1, desiredWidth
+          local incrementY, targetY = 1, desiredHeight
+          if self:getY() == desiredHeight then
+            -- move from top to bottom
+            incrementY, targetY = -1, 1
+          end
+
+          print(string.format("Digging a %s x %s frame", desiredWidth, desiredHeight))
+          for y=self:getY(), targetY, incrementY do
+            self:setY(y)
+
+            if self:getX() == desiredWidth then
+              -- move from right to left
+              incrementX, targetX = -1, 1
+            else
+              incrementX, targetX = 1, desiredWidth
             end
+
+            for x=self:getX(), targetX, incrementX do
+              self:setX(x)
+              self:fillFloor()
+              self:fillCeiling()
+              if x ~= targetX then self:moveForward() 
+              else self:fillWall() end
+            end
+            print("row done", y)
 
             --[[ only move up to next row if turtle
                  is not already at the ceiling ]]
-            if y < targetY and increment > 0 then
-              self:moveUp()
+            if self:getY() ~= targetY then
+              if incrementY > 0 then self:moveUp() end
+              if incrementY < 0 then self:moveDown() end
+              self:fillWall()
+              self:turnAround()
             end
-            if y > targetY and increment < 0 then
-              self:moveDown()
-            end
-
-            self:turnAround()
           end
+          print("heading: ", self:getHeading())
+      end
 
-          if heading == 0  then
-            if increment < 0 then turtle.turnRight() end
-            if increment > 0 then turtle.turnLeft() end
+      function app:alignForNextFrame(direction)
+          local x = self:getX()
+          local width = self.options.width
+
+          if x == 1 then
+            turtle.turnRight()
+            self:moveForward()
+            turtle.turnLeft()
           else
-            if increment < 0 then turtle.turnLeft() end
-            if increment > 0 then turtle.turnRight() end
+            turtle.turnLeft()
+            self:moveForward()
+            turtle.turnRight()
           end
+          self:fillWall()
+          self:turnAround()
+      end
+
+      function app:returnToDeploymentZone()
+        -- local reverseStepDirection = true
+
+        -- while self:getX() > 1 do
+        --   self:setX(self:getX()-1)
+        --   self:moveForward()
+        -- end
+
+        -- turtle.turnLeft()
+
+        -- while self:getY() > 1 do
+        --   self:setY(self:getY()-1)
+        --   self:doStairStep(reverseStepDirection)
+        --   self:moveDown()
+        -- end
+
+        -- while self:getZ() > 1 do
+        --   self:setZ(self:getZ()-1)
+        --   self:doStairStep(reverseStepDirection)
+        --   self:moveForward()
+        -- end
+
       end
 
       function app:doWork()
-        print("Creating Tunnel")
-        local targetHeight = tonumber(app.options.height)
-        local targetWidth = tonumber(app.options.width)
-        local targetLength = tonumber(app.options.length)
-        local z
-        for z=1, targetLength, 1 do -- main loop
-          print(string.format("Step %d/%d %d", z, targetLength, z % 2))
-
-          self:moveForward()
-          self:doStairStep()
-
-          if z % 2 > 0 then
-            turtle.turnRight()
-            self:digFrame(1, 1, 1, targetWidth-1, targetHeight)
-          else
-            turtle.turnLeft()
-            self:digFrame(targetWidth-1, targetHeight, -1, 1, 1)
-          end
-          self:torchDecision(z)
-        end -- main loop
-
-        print "Tunnel complete."
-        print "Returning to deployment zone."
-
+        local targetLength, z = tonumber(self.options.length)
+        print(string.format("Creating Tunnel: %s long, %s wide, %s high", 
+          targetLength, self.options.width, self.options.height))
+        self:setX(1)
+        self:setY(1)
+        self:setZ(1)
+        print("starting tunnel")
+        self:getCoords()
+        self:moveForward()
+        self:fillFloor()
+        turtle.turnLeft()
+        self:fillWall()
         self:turnAround()
-        local reverseStepDirection = true
-        for x=targetLength,1,-1 do
-          self:doStairStep(reverseStepDirection)
-          turtle.forward()
+
+        for z=self:getZ(), targetLength, 1 do -- main loop
+          print(string.format("Step %d/%d", z, targetLength))
+          self:setZ(z)
+          self:doStairStep()
+          self:digFrame()
+          if z ~= targetLength then
+            self:alignForNextFrame()
+          end
         end
+        self:returnToDeploymentZone()
+
         print "Done."
       end
 
