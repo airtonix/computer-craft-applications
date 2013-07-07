@@ -400,6 +400,7 @@ local app = {}
               self:setX(x)
               self:fillFloor()
               self:fillCeiling()
+              self:torchDecision()
               if x ~= targetX then self:moveForward() 
               else self:fillWall() end
             end
@@ -467,11 +468,16 @@ local app = {}
         self:setZ(1)
         print("starting tunnel")
         self:getCoords()
+
         self:moveForward()
-        self:fillFloor()
-        turtle.turnLeft()
-        self:fillWall()
-        self:turnAround()
+        if self.options.fill then
+          self:fillFloor()
+          turtle.turnLeft()
+          self:fillWall()
+          self:turnAround()
+        else
+          turtle.turnRight()
+        end
 
         for z=self:getZ(), targetLength, 1 do -- main loop
           print(string.format("Step %d/%d", z, targetLength))
