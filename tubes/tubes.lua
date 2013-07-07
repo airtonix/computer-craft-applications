@@ -102,34 +102,30 @@ local app = {}
         return false
       end
 
-      function  app:getResource( preferred, optional )
-        local slot = slot and tonumber(preferred)
-        local optionalSlotMin, optionalSlotMax
+      function  app:getResource( slot, ... )
+        if slot == nil then return end
 
-        if optional~=nil and type(optional) == "table" then
-          optionalSlotMin, optionalSlotMax = unpack(optional)
-        elseif type(optional) == "number" then
-          optionalSlotMin = optional
-          optionalSlotMax = optional
-        else
-          optional = nil
-          optionalSlotMax = nil
-          optionalSlotMin = nil
+        local slot = tonumber(slot)
+        local optionalSlotMin, optionalSlotMax = nil, nil
+
+        if #arg > 0 then optionalSlotMin = tonumber(arg[1]) end
+        if #arg > 1 then optionalSlotMax = tonumber(arg[2]) end
+        if type(optionalSlotMin) == "number" and optionalSlotMax == nil then
+          optionalSlotMax = optionalSlotMin
         end
 
-        if type(slot) == "number" then
+        if turtle.getItemCount(slot) > 0 then
           turtle.select(slot)
-          return slot
-        end
-
-        for i=2, 15 do
-          turtle.select(i)
-          if turtle.getItemCount(i) >0 then
-            return i
+          return
+        else
+          local index
+          for index = optionalSlotMin, optionalSlotMax do
+            turtle.select(index)
+            if turtle.getItemCount(index) > 0 then
+              return true
+            end
           end
         end
-
-        return false
       end
 
       function app:hasStorageSpace()
@@ -343,7 +339,7 @@ local app = {}
         -- current frame is at the torch interval
         if self:getZ() % torchInterval == 0  and self:getY() ==  2 then
 
-          -- place a torch on the right if the width is greater 
+          -- place a torch on the right if the width is greater
           -- than the desired width.
           if currentX == desiredWidth-1 and desiredWidth > torchInterval then
             turtle.turnRight()
@@ -375,32 +371,35 @@ local app = {}
 
       function app:fillFloor()
         if not self.options.fill then return end
+        local floorFillSlot = tonumber(self.options.floorFillSlot)
         local y = self:getY()
         if y ~= 1 then return end
         if not turtle.detectDown() then
           print("placing floor")
-          app:getItemSlot(app.options.floorFillSlot)
+          app:getItemSlot(floorFillSlot, 3, 4)
           turtle.placeDown()
         end
       end
 
       function app:fillCeiling()
         if not self.options.fill then return end
+        local ceilingFillSlot = tonumber(self.options.ceilingFillSlot)
         local y = self:getY()
         if y ~= tonumber(self.options.height) then return end
         if not turtle.detectUp() then
           print("placing ceiling")
-          app:getItemSlot(app.options.ceilingFillSlot)
+          app:getItemSlot(ceilingFillSlot, 2, 4)
           turtle.placeUp()
         end
       end
       function app:fillWall()
         if not self.options.fill then return end
+        local wallFillSlot = tonumber(self.options.wallFillSlot)
         local x = self:getX()
         if x ~= 1 and x ~= tonumber(self.options.width) then return end
         if not turtle.detect() then
           print("placing wall")
-          app:getItemSlot(self.options.wallFillSlot)
+          app:getResource(wallFillSlot, 3, 4)
           turtle.place()
         end
       end
