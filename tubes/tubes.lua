@@ -306,7 +306,7 @@ local app = {}
       end
 
       function app:placeTorch()
-        turtle.dig()
+        -- turtle.dig()
         turtle.select(1)
         turtle.place()
       end
@@ -334,17 +334,17 @@ local app = {}
 
           -- place a torch on the right if the width is greater 
           -- than the desired width.
-          if currentX == desiredWidth and desiredWidth > torchInterval then
+          if currentX == desiredWidth-1 and desiredWidth > torchInterval then
             turtle.turnRight()
             self:placeTorch()
             turtle.turnLeft()
           end
 
           -- always place a torch at left side
-          if currentX == 1 then
-            turtle.turnLeft()
+          if currentX == 2 then
+            self:turnAround()
             self:placeTorch()
-            turtle.turnRight()
+            self:turnAround()
           end
 
         end
