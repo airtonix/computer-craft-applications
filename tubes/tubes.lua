@@ -12,11 +12,11 @@ local app = {}
           down: move down one block each forward frame
         ]]
         { name = 'stairs', value = false },
+        { name = 'torchSlot', value = 1 },
         { name = 'fill', value = false },
-        { name = 'floorFillSlot', value = 0 },
-        { name = 'wallFillSlot', value = 0 },
-        { name = 'ceilingFillSlot', value = 0 },
-        { name = 'torchSlot', value = 1 }
+        { name = 'floorFillSlot', value = 2 },
+        { name = 'wallFillSlot', value = 3 },
+        { name = 'ceilingFillSlot', value = 4 },
       }
       app.options = {}
       app.coordinates = {
@@ -102,18 +102,33 @@ local app = {}
         return false
       end
 
-      function  app:getItemSlot( slot )
-        local slot = slot and tonumber(slot)
+      function  app:getResource( preferred, optional )
+        local slot = slot and tonumber(preferred)
+        local optionalSlotMin, optionalSlotMax
+
+        if optional~=nil and type(optional) == "table" then
+          optionalSlotMin, optionalSlotMax = unpack(optional)
+        elseif type(optional) == "number" then
+          optionalSlotMin = optional
+          optionalSlotMax = optional
+        else
+          optional = nil
+          optionalSlotMax = nil
+          optionalSlotMin = nil
+        end
+
         if type(slot) == "number" then
           turtle.select(slot)
           return slot
         end
+
         for i=2, 15 do
           turtle.select(i)
           if turtle.getItemCount(i) >0 then
             return i
           end
         end
+
         return false
       end
 
