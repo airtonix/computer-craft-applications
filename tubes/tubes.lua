@@ -102,7 +102,7 @@ local app = {}
         return false
       end
 
-      function  app:getResource( slot, ... )
+      function app:getResource( slot, ... )
         if slot == nil then return end
 
         local slot = tonumber(slot)
@@ -376,7 +376,7 @@ local app = {}
         if y ~= 1 then return end
         if not turtle.detectDown() then
           print("placing floor")
-          app:getItemSlot(floorFillSlot, 3, 4)
+          app:getResource(floorFillSlot, 3, 4)
           turtle.placeDown()
         end
       end
@@ -388,7 +388,7 @@ local app = {}
         if y ~= tonumber(self.options.height) then return end
         if not turtle.detectUp() then
           print("placing ceiling")
-          app:getItemSlot(ceilingFillSlot, 2, 4)
+          app:getResource(ceilingFillSlot, 2, 4)
           turtle.placeUp()
         end
       end
