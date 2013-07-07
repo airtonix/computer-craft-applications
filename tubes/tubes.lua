@@ -28,9 +28,9 @@ local app = {}
         ]]
         { name = 'stairs', value = false },
         { name = 'fill', value = false },
-        { name = 'floorFillSlot', value = false },
-        { name = 'wallFillSlot', value = false },
-        { name = 'ceilingFillSlot', value = false }
+        { name = 'floorFillSlot', value = 0 },
+        { name = 'wallFillSlot', value = 0 },
+        { name = 'ceilingFillSlot', value = 0 }
       }
       app.options = {}
       app.coordinates = {
@@ -142,13 +142,13 @@ local app = {}
       end
 
       function app:invenCheck()
-        local torches = self.options.torches
-        local fill = self.options.fill
 
         -- check torches
+        local torches = self.options.torches
+        local torchSlot = tonumber(self.options.torchSlot)
         if tonumber(torches) > 0 then
-          turtle.select(16)
-          while ( turtle.getItemCount(16) < 1 ) do
+          turtle.select(torchSlot)
+          while ( turtle.getItemCount(torchSlot) < 1 ) do
             print " "
             print "More torches are needed."
             print "Please add torches to slot 16"
@@ -157,15 +157,25 @@ local app = {}
           end
         end
 
+
         -- check filler
+        local fill = self.options.fill
+        local floorFillSlot = tonumber(self.options.floorFillSlot)
+        local wallFillSlot = tonumber(self.options.wallFillSlot)
+        local ceilingFillSlot = tonumber(self.options.ceilingFillSlot)
         if fill then
-          turtle.select(1)
-          while turtle.getItemCount(1) < 1 do
-            print " "
-            print "Cobblestone or other filler blocks are needed."
-            print "Please add them to slot 1"
-            print "Press Enter when done."
+          turtle.select(floorFillSlot)
+          while turtle.getItemCount(floorFillSlot) < 1 do
+            print("Floor Cavity Fillin")
+            print("> Insufficient resources.")
+            print("Please add them to slot ", floorFillSlot)
+            print("Press Enter when done.")
             x = read()
+          end
+          for k,v in pairs({wall=wallFillSlot, ceiling=ceilingFillSlot}) do
+            if turtle.getItemCount(v) < 1 then
+              print(string.format("Put [%s] filler resources in slot [%s]", k, v))
+            end
           end
         end
 
