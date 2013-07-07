@@ -1,21 +1,6 @@
-
-Manifest = function()
-  --[[
-    meta data used by the computer craft github client.
-  ]]
-  return {
-    name = 'Tubes',
-    description = "Create Tunnels & Stairs. forked from aTunnel by Andre L Noel",
-    version = '0.0.2',
-    command = 'tube',
-    author = "Zenobius Jiricek <airtonix@gmail.com>",
-    contributors = {},
-    license = "CCA 3.0 Unported License. <http://creativecommons.org/licenses/by/3.0/deed.en_US>"
-  }
-end
-
 local app = {}
-      app.manifest = Manifest()
+      app.name = "Tubes"
+      app.version = "alpha"
       app.arguments = {
         { name = 'length', value = 1 },
         { name = 'width', value = 3 },
@@ -30,7 +15,8 @@ local app = {}
         { name = 'fill', value = false },
         { name = 'floorFillSlot', value = 0 },
         { name = 'wallFillSlot', value = 0 },
-        { name = 'ceilingFillSlot', value = 0 }
+        { name = 'ceilingFillSlot', value = 0 },
+        { name = 'torchSlot', value = 1 }
       }
       app.options = {}
       app.coordinates = {
@@ -40,7 +26,7 @@ local app = {}
       }
 
       function app:showUsage()
-        print(self.manifest.name, " ", self.manifest.version)
+        print(self.name, " ", self.version)
         print "Usage: "
         print "> tube L D [H] [W] [Ti] "
         print " L [int]: blocks forward to mine"
