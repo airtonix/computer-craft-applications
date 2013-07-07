@@ -314,19 +314,39 @@ local app = {}
 
       function app:torchDecision(distance)
         local torchInterval = tonumber(self.options.torches)
+        local desiredWidth = tonumber(self.options.width)
         local currentX = self:getX()
+
+        -- 0 means don't place torches
         if torchInterval == 0 then return end
-        if distance % torchInterval == 0 then
-          if currentX == self.options.width then
+
+        --[[ TODO: work out some awesome meta programming
+                   that place torch based on simple parameter
+
+                    x x x x x
+                    x       x
+                    x       x
+                    x       x
+                    x x x x x
+          ]]
+        -- current frame is at the torch interval
+        if self:getZ() % torchInterval == 0  and self:getY() ==  2 then
+
+          -- place a torch on the right if the width is greater 
+          -- than the desired width.
+          if currentX == desiredWidth and desiredWidth > torchInterval then
             turtle.turnRight()
             self:placeTorch()
             turtle.turnLeft()
           end
+
+          -- always place a torch at left side
           if currentX == 1 then
             turtle.turnLeft()
             self:placeTorch()
             turtle.turnRight()
           end
+
         end
       end
 
