@@ -6,6 +6,6 @@
     contributors = {},
     license = "CCA 3.0 Unported License. <http://creativecommons.org/licenses/by/3.0/deed.en_US>",
 	files = {
-		{name="tubes.lua", type="command"}
+		{file="tubes.lua", type="command"}
 	}
 }
