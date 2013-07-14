@@ -89,5 +89,61 @@ local app = {}
         self:doWork()
       end
 
+      function app:getSaplingCount()
+        self.saplingCount = turtle.getItemCount(self.options.slotSapling)
+        return self.saplingCount
+      end
+
+      function app:doWork()
+
+        while true do
+
+          turtle.select(self.options.slotSapling)
+
+          if self:getSaplingCount() > 0 and turtle.compareTo(self.options.slotSaplingReference) then
+            -- place
+
+            turtle.place()
+            turtle.select(self.options.slotWoodReference)
+
+            -- wait for the block in front to match our wood reference
+            while not turtle.compare() do
+              os.queueEvent("loop")
+              os.pullEvent()
+            end
+
+            -- select
+            turtle.select(self.options.slotStorageStart)
+            turtle.dig()
+            turtle.forward()
+
+            while turtle.compareUp() do
+             turtle.digUp()
+             turtle.up()
+            end
+
+            while turtle.detectDown() do turtle.down() end
+
+            turtle.back()
+            turtle.turnRight()
+            turtle.turnRight()
+            turtle.refuel(1)
+            turtle.drop()
+            turtle.turnRight()
+            turtle.turnRight()
+
+          else
+
+            -- re-supply or complain about no saplings
+            turtle.turnRight()
+            turtle.suck()
+            turtle.turnLeft()
+          end
+
+          -- pause ?
+          os.queueEvent("Loop")
+          os.pullEvent()
+        end
+      end
 
 app:init({...})
