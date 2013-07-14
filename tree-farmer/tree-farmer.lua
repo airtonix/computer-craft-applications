@@ -1,26 +1,6 @@
-Manifest = function()
-	--[[
-		meta data used by the computer craft github client.
-	]]
-	return {
-		-- human readable name and description, shown in `github list` or github search `app`
-		name = 'Tree Farmer',
-		description = "Single Tree Farmer",
-		-- moreinfo: google "semver"
-		version = '0.0.1',
-		-- used by github client, used to rename this file
-		command = 'twigs',
-		-- attributation: author
-		author = "Zenobius Jiricek <airtonix@gmail.com>",
-    -- attributation: contributors
-    contributors = {},
-		-- attributation: license type
-		license = "CCA 3.0 Unported License. <http://creativecommons.org/licenses/by/3.0/deed.en_US>"
-	}
-end
-
 local app = {}
-      app.manifest = Manifest()
+      app.name = "Tree Farmer"
+      app.version = '0.0.1'
       app.arguments = {
         { name = 'slotSapling', value = 1},                 -- sapling place slot
         { name = 'slotStorageStart', value = 2},                 -- sapling place slot
@@ -89,60 +69,176 @@ local app = {}
         self:doWork()
       end
 
+      function app:needsFuel()
+        local fuelLevel = turtle.getFuelLevel()
+        local fuelType = type(fuelLevel)
+        if fuelType == "number" then return fuelLevel < 1 end
+        if fuelType == "string" then return fuelLevel ~= "unlimited" end
+        return false
+      end
+
+      function app:fuelup(...)
+        result = true
+        while self:needsFuel() do
+          result = false
+          for i=self.options.slotStorageStart, self.options.slotStorageEnd do
+            turtle.select(i)
+            if turtle.refuel(1) then
+              result = true
+              break
+            end
+          end
+          if not result then
+            print "Turtle fuel store empty."
+            print "Resupply, Press Enter when done."
+            x = read()
+          end
+        end
+        return true
+      end
+
+      function app:turnAround()
+          turtle.turnLeft();
+          turtle.turnLeft();
+      end
+
+      function app:moveForward() -- turtle move forwards
+        self:fuelup()
+        while not turtle.forward() do
+          turtle.attack()
+          turtle.attack()
+        end
+      end
+
+      function app:moveBackward() -- turtle move backwards
+        self:fuelup()
+        while not turtle.back() do
+          self:turnAround()
+          turtle.attack()
+          turtle.attack()
+          self:turnAround()
+        end
+      end
+
+      function app:moveUp() -- turtle move up
+        self:fuelup()
+        while not turtle.up() do
+          turtle.attackUp()
+          turtle.attackUp()
+        end
+      end
+
+      function app:moveDown() -- turtle move down
+        self:fuelup()
+        while not turtle.down() do
+          turtle.attackDown()
+          turtle.attackDown()
+        end
+      end
+
       function app:getSaplingCount()
         self.saplingCount = turtle.getItemCount(self.options.slotSapling)
         return self.saplingCount
+      end
+
+      function app:hasSaplings()
+        return self:getSaplingCount() > 0
+      end
+
+      function app:holdingValidSapling()
+        turtle.select(self.options.slotSapling)
+        return turtle.compareTo(self.options.slotSaplingReference)
+      end
+
+      function app:lookingAtValidWood(direction)
+        turtle.select(self.options.slotWoodReference)
+
+        if direction == 'up' then
+          return turtle.compareUp()
+        elseif direction == 'down' then
+          return turtle.compareDown()
+        else
+          return turtle.compare()
+        end
+
+      end
+
+      function app:dwell()
+        os.queueEvent("loop")
+        os.pullEvent()
+      end
+
+      function app:refuel()
+        if self:needsFuel() then
+          -- refuel with 1 item
+          turtle.refuel(1)
+        end
+      end
+
+      function app:getMoreSaplings()
+        os.queueEvent("re-supplying saplings")
+
+        self:turnAround()
+
+        while turtle.forward() do end
+        turtle.suck()
+
+        self:turnAround()
+
+      end
+
+      function app:cutDownTreeTrunk()
+        -- select
+
+        turtle.dig()
+        turtle.forward()
+
+        while self:lookingAtValidWood('up') do
+          turtle.digUp()
+          turtle.up()
+        end
+
+        while turtle.detectDown() do turtle.down() end
+      end
+
+      function app:depositWood()
+        -- move back to original dwell position
+        turtle.back()
+
+        -- turn around
+        turtle.turnRight()
+        turtle.turnRight()
+
+        turtle.drop()
+        turtle.turnRight()
+        turtle.turnRight()
       end
 
       function app:doWork()
 
         while true do
 
-          turtle.select(self.options.slotSapling)
-
-          if self:getSaplingCount() > 0 and turtle.compareTo(self.options.slotSaplingReference) then
-            -- place
-
-            turtle.place()
-            turtle.select(self.options.slotWoodReference)
-
-            -- wait for the block in front to match our wood reference
-            while not turtle.compare() do
-              os.queueEvent("loop")
-              os.pullEvent()
-            end
-
-            -- select
-            turtle.select(self.options.slotStorageStart)
-            turtle.dig()
-            turtle.forward()
-
-            while turtle.compareUp() do
-             turtle.digUp()
-             turtle.up()
-            end
-
-            while turtle.detectDown() do turtle.down() end
-
-            turtle.back()
-            turtle.turnRight()
-            turtle.turnRight()
-            turtle.refuel(1)
-            turtle.drop()
-            turtle.turnRight()
-            turtle.turnRight()
-
-          else
-
-            -- re-supply or complain about no saplings
-            turtle.turnRight()
-            turtle.suck()
-            turtle.turnLeft()
+          if not self:hasSaplings() or not self:holdingValidSapling() then
+            self:getMoreSaplings()
           end
 
+          -- place a sapling
+          turtle.place()
+
+          -- wait for the block in front to match our wood reference
+          while not self:lookingAtValidWood() do self:dwell() end
+
+          -- harvest the wood
+          self:cutDownTreeTrunk()
+
+          -- refuel if needed
+          self:refuel()
+
+          -- deposit the goodies
+          self:depositWood()
+
           -- pause ?
-          os.queueEvent("Loop")
-          os.pullEvent()
+          self:dwell()
         end
       end
 
