@@ -1,0 +1,11 @@
+os.loadAPI("aware")
+os.loadAPI("utils")
+ 
+local tArgs = { ... }
+if #tArgs ~= 4 then
+  utils.termwrite("usage: 'calibrate x y z o'")
+else
+  local position = {tonumber(tArgs[1]),tonumber(tArgs[2]),tonumber(tArgs[3]),tonumber(tArgs[4])}
+  aware.setposition("current", position)
+  os.reboot()
+end

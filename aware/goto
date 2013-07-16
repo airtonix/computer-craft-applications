@@ -1,0 +1,10 @@
+os.loadAPI("aware")
+os.loadAPI("utils")
+ 
+local tArgs = { ... }
+if #tArgs < 2 then
+  utils.termwrite("usage:")
+  utils.termwrite("'goto x y z o' -- z and o optional")
+else
+  aware.goto({tonumber(tArgs[1]),tonumber(tArgs[2]),tonumber(tArgs[3]),tonumber(tArgs[4])})
+end

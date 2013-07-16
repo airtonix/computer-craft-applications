@@ -1,0 +1,196 @@
+os.loadAPI("lama")
+
+-- If we don't have Forairan's init-scripts make sure we don't overwrite an
+-- existing startup file.
+if fs.exists("/startup") and (not fs.exists("/init-scripts") or
+                              not fs.isDir("/init-scripts"))
+then
+    error("startup script found; would be overwritten")
+end
+
+-------------------------------------------------------------------------------
+-- Config                                                                    --
+-------------------------------------------------------------------------------
+
+local stateFile = "/.lama-move-state"
+
+-------------------------------------------------------------------------------
+-- State                                                                     --
+-------------------------------------------------------------------------------
+
+-- Path state.
+local state = nil
+
+-------------------------------------------------------------------------------
+-- State saving / loading                                                    --
+-------------------------------------------------------------------------------
+
+function save()
+    local t = textutils.serialize(state)
+    local f = fs.open(stateFile, "w")
+    f.write(t)
+    f.close()
+
+end
+
+function load()
+    if not fs.exists(stateFile) or fs.isDir(stateFile) then return end
+    local f = fs.open(stateFile, "r")
+    local t = f.readLine()
+    f.close()
+    state = textutils.unserialize(t)
+end
+
+function cleanup()
+    if fs.exists("/init-scripts") and fs.isDir("/init-scripts") then
+        fs.delete("/init-scripts/99_lama-move")
+    else
+        fs.delete("/startup")
+    end
+    fs.delete(stateFile)
+end
+
+-------------------------------------------------------------------------------
+-- Movement logic                                                            --
+-------------------------------------------------------------------------------
+
+-- Moves the turtle the specified number of blocks along the specified axis.
+local function move(distance, axis)
+    -- If we make no moves along this axis we can skip the rest.
+    if distance == 0 then return true end
+
+    local directions = ({
+        x = {lama.side.north, lama.side.south},
+        y = {lama.side.east, lama.side.west}})[axis]
+    local action = ({
+        x = lama.forward,
+        y = lama.forward,
+        z = distance > 0 and lama.up or lama.down})[axis]
+
+    -- Turn to face the axis if necessary, in a way that we can move
+    -- forwards (we don't want to move backwards because we cannot dig or
+    -- attack when moving backwards). This is unnecessary for the z axis,
+    -- because facing doesn't matter there.
+    if directions then
+        local direction = distance > 0 and directions[1] or directions[2]
+        lama.turn(direction)
+    end
+
+    -- Move forward as often as necessary.
+    distance = math.abs(distance)
+    while distance > 0 do
+        local result, reason = action(5) -- Try up to 5 tims.
+        if not result then
+            return result, reason
+        end
+        distance = distance - 1
+    end
+
+    return true
+end
+
+-- Moves towards the absolute target position stored in the 'state' variable.
+function navigate()
+    local x, y, z = lama.get()
+    local tx, ty, tz = state.x, state.y, state.z
+    local dx, dy, dz = tx - x, ty - y, tz - z
+
+    for axis, distance in pairs({x = dx, y = dy, z = dz}) do
+        local result, reason = move(distance, axis)
+        if not result then
+            return result, reason
+        end
+    end
+
+    -- Make sure we're actually at our target location. This is more like an
+    -- assert. It should never fail.
+    x, y, z = lama.get()
+    if x ~= state.x or y ~= state.y or z ~= state.z then
+        error("Discrepancy between target position and final position.")
+    end
+
+    -- We're done and did not fail.
+    return true
+end
+
+-------------------------------------------------------------------------------
+-- Initialization                                                            --
+-------------------------------------------------------------------------------
+
+local tArgs = {...}
+if #tArgs > 0 then
+    -- Got parameters, cancel any previous moves.
+    cleanup()
+
+    -- Parse input.
+    local tx, ty, tz = tonumber(tArgs[1]), tonumber(tArgs[2]), tonumber(tArgs[3])
+    print(string.format("Moving to (%d, %d, %d).", tx, ty, tz))
+
+    -- Save target position.
+    state = {x = tx, y = ty, z = tz}
+    save()
+else
+    -- Try to resume execution.
+    load()
+
+    -- Finish active path navigation.
+    if state then
+        -- See if the previous move was successful. This isn't *really*
+        -- necessary in this program's case, because we could just try to
+        -- continue moving, which would then result in a failure, again. But
+        -- this *is* an example program, so... ;)
+        local result, reason = lama.startupResult()
+        if not result then
+            -- Try to switch to undo mode.
+            print("Move across reboot failed: " .. reason)
+
+            cleanup()
+            return
+        end
+
+        -- Did not fail across reboot, continue moving.
+        print(string.format("Resuming to (%d, %d, %d).",
+            state.x, state.y, state.z))
+    else
+        -- Cannot resume, print usage.
+        print("Usage: lama-move tx ty tz")
+        print("  Where tx, ty and tz are the target")
+        print("  coordinates to move to.")
+
+        cleanup()
+        return
+    end
+end
+
+-- Create startup script to resume execution on reboot.
+local f
+if fs.exists("/init-scripts") and fs.isDir("/init-scripts") then
+    f = fs.open("/init-scripts/99_lama-move", "w")
+    f.writeLine("fs.delete('/init-scripts/99_lama-move')")
+else
+    f = fs.open("/startup", "w")
+    f.writeLine("fs.delete('/startup')")
+end
+f.writeLine("shell.run('/lama-move')")
+f.close()
+
+-- Got a new target or resuming movement.
+local result, reason = navigate()
+if result then
+    print("Move complete.")
+else
+    print("Move failed: " .. reason)
+end
+
+-- Done, remove startup script and state.
+cleanup()
+
+-- Used for testing, keep moving around in a 4x4x4 cube at random.
+--[[
+if result then
+    local cubesize = 4
+    shell.run("lama-move " .. math.random(0, cubesize - 1) .. " " ..
+                              math.random(0, cubesize - 1) .. " " ..
+                              math.random(0, cubesize - 1))
+end
+-- ]]

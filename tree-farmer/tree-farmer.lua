@@ -154,17 +154,17 @@ local app = {}
         turtle.select(self.options.slotWoodReference)
 
         if direction == 'up' then
-          return turtle.compareUp()
+          return turtle.detectUp() and turtle.compareUp()
         elseif direction == 'down' then
-          return turtle.compareDown()
+          return turtle.detectDown() and turtle.compareDown()
         else
-          return turtle.compare()
+          return turtle.detect() and turtle.compare()
         end
 
       end
 
       function app:dwell()
-        os.queueEvent("loop")
+        os.queueEvent("dwell-loop")
         os.pullEvent()
       end
 
@@ -175,51 +175,62 @@ local app = {}
         end
       end
 
+      function app:moveToLocation(location)
+        if self.currentLocation == location then return end
+        print("Moving to "..location)
+        self:turnAround()
+        print("rotating")
+        while turtle.forward() do 
+          print("moving")
+          self:dwell() end
+        self.currentLocation = location
+      end
+
+
       function app:getMoreSaplings()
-        os.queueEvent("re-supplying saplings")
-
-        self:turnAround()
-
-        while turtle.forward() do end
+        os.queueEvent("re-supplying-saplings")
+        print("sapling-resupply: start")
+        self:moveToLocation('supplyStation')
+        turtle.select(self.options.slotSapling)
         turtle.suck()
-
-        self:turnAround()
-
+        print("sapling-resupply: done")
       end
 
       function app:cutDownTreeTrunk()
         -- select
+        print("tree-harvest: start")
 
         turtle.dig()
         turtle.forward()
-
         while self:lookingAtValidWood('up') do
           turtle.digUp()
           turtle.up()
         end
+        print "end of trunk"
 
         while turtle.detectDown() do turtle.down() end
+        turtle.back()
+
+        print("tree-harvest: done")
+
       end
 
       function app:depositWood()
-        -- move back to original dwell position
-        turtle.back()
-
-        -- turn around
+        print("dump-wood: start")
+        self:moveToLocation('supplyStation')
         turtle.turnRight()
-        turtle.turnRight()
-
         turtle.drop()
-        turtle.turnRight()
-        turtle.turnRight()
+        turtle.turnLeft()
+        print("dump-wood: done")
       end
 
       function app:doWork()
 
         while true do
 
-          if not self:hasSaplings() or not self:holdingValidSapling() then
+          if not self:hasSaplings() then --or not self:holdingValidSapling() then
             self:getMoreSaplings()
+            self:moveToLocation('tree')
           end
 
           -- place a sapling
@@ -236,6 +247,8 @@ local app = {}
 
           -- deposit the goodies
           self:depositWood()
+          self:moveToLocation('tree')
+
 
           -- pause ?
           self:dwell()
